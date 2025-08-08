@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
+<title>Grammar Garden – Prototype</title>
+<style>
+  :root{
+    --bg:#0f172a;       /* slate-900 */
+    --panel:#111827;    /* gray-900 */
+    --ink:#e5e7eb;      /* gray-200 */
+    --muted:#9ca3af;    /* gray-400 */
+    --accent:#22c55e;   /* green-500 */
+    --accent-2:#16a34a; /* green-600 */
+    --danger:#ef4444;   /* red-500 */
+    --warn:#f59e0b;     /* amber-500 */
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:linear-gradient(180deg,#0b1225,#0f172a 40%,#0a0f1d);color:var(--ink);font-family:system-ui,-apple-system,Segoe UI,Roboto,Inter,Helvetica,Arial,sans-serif}
+  .wrap{max-width:520px;margin:0 auto;padding:16px 14px 28px}
+  header{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px;border-radius:16px;background:rgba(255,255,255,0.04);backdrop-filter:blur(6px)}
+  .title{font-weight:700;letter-spacing:.2px}
+  .stats{display:flex;gap:10px;font-size:12px;color:var(--muted)}
+  .stat{padding:6px 8px;border-radius:10px;background:rgba(255,255,255,0.06)}
+  .panel{margin-top:14px;background:linear-gradient(180deg,rgba(255,255,255,0.06),rgba(255,255,255,0.03));border:1px solid rgba(255,255,255,0.08);border-radius:18px;padding:14px}
+  .qno{font-size:12px;color:var(--muted)}
+  .question{margin-top:6px;font-size:18px;line-height:1.4}
+  .cat{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.12em;margin-top:2px}
+  .options{display:grid;grid-template-columns:1fr;gap:10px;margin-top:14px}
+  button.opt{width:100%;padding:14px 12px;border-radius:14px;border:1px solid rgba(255,255,255,0.1);background:#101826;color:var(--ink);font-size:16px}
+  button.opt:active{transform:scale(0.995)}
+  button.opt.correct{border-color:rgba(34,197,94,.7);background:rgba(34,197,94,.12)}
+  button.opt.wrong{border-color:rgba(239,68,68,.7);background:rgba(239,68,68,.12)}
+  .explain{margin-top:10px;font-size:14px;color:var(--muted);min-height:18px}
+
+  /* Garden */
+  .garden{position:relative;height:220px;margin-top:18px;border-radius:18px;background:linear-gradient(180deg,#0e1a30, #0b1426);overflow:hidden;border:1px solid rgba(255,255,255,.06)}
+  .soil{position:absolute;bottom:0;left:0;right:0;height:54px;background:linear-gradient(#3f2d1d,#2b1e12);border-top:1px solid rgba(0,0,0,.4)}
+  .plant{position:absolute;left:50%;transform:translateX(-50%);bottom:54px;display:flex;align-items:flex-end;justify-content:center}
+  .stem{width:6px;background:linear-gradient(#1aa34a,#23c95f);border-radius:3px 3px 0 0;height:0;transition:height .35s ease}
+  .flower{position:absolute;bottom:var(--h,0px);left:50%;transform:translate(-50%, 12px) scale(var(--scale,0));width:48px;height:48px;border-radius:50%;background:radial-gradient(circle at 50% 50%,#ffd166 0 10px,#eab308 10px 12px, #f0b429 12px 16px, transparent 16px), conic-gradient(from 0deg,#a3e635,#86efac,#4ade80,#22c55e,#86efac,#a3e635);
+    transition:transform .35s ease}
+  .snail{position:absolute;bottom:58px;right:16px;opacity:0;transition:opacity .25s ease}
+  .snail svg{width:40px;height:40px}
+  .snail.show{opacity:1}
+
+  .progress{height:8px;background:rgba(255,255,255,.08);border-radius:8px;overflow:hidden;margin-top:12px}
+  .bar{height:100%;width:0;background:linear-gradient(90deg,#22c55e,#16a34a);transition:width .3s ease}
+
+  .actions{display:flex;gap:10px;margin-top:14px}
+  .btn{flex:1;padding:12px;border-radius:12px;border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.04);color:var(--ink)}
+  .btn.primary{background:linear-gradient(180deg,#22c55e,#16a34a);color:#07140c;border:none}
+
+  .toast{position:fixed;bottom:14px;left:50%;transform:translateX(-50%);background:#0b1327;color:var(--ink);padding:10px 12px;border-radius:12px;border:1px solid rgba(255,255,255,.08);font-size:14px;opacity:0;transition:opacity .25s ease}
+  .toast.show{opacity:1}
+
+  .footer{margin-top:16px;color:var(--muted);font-size:12px;text-align:center}
+  .link{color:#a3e635}
+
+  /* Small screens fine by default */
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div class="title">Grammar Garden</div>
+      <div class="stats">
+        <div class="stat" id="streakStat">Streak: 0</div>
+        <div class="stat" id="bestStat">Best: 0</div>
+        <div class="stat" id="flowersStat">Blüten: 0</div>
+      </div>
+    </header>
+
+    <div class="panel" id="qa">
+      <div class="qno" id="qno">Frage 1 von 10</div>
+      <div class="cat" id="cat">Kategorie</div>
+      <div class="question" id="question">…</div>
+      <div class="options" id="options"></div>
+      <div class="explain" id="explain"></div>
+      <div class="progress"><div class="bar" id="bar"></div></div>
+    </div>
+
+    <div class="garden" aria-label="Garten">
+      <div class="plant">
+        <div class="stem" id="stem"></div>
+        <div class="flower" id="flower"></div>
+      </div>
+      <div class="snail" id="snail" aria-hidden="true">
+        <!-- simple snail icon -->
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" xmlns="http://www.w3.org/2000/svg">
+          <path stroke-width="1.6" d="M3 17c0-2 1.5-4 4-4h5a3 3 0 1 0 0 6H7a4 4 0 0 1-4-4Z"/>
+          <path stroke-width="1.6" d="M17 19c2.8 0 4-1.6 4-4s-1.2-4-4-4h-1"/>
+          <circle cx="18" cy="11" r="1.2" fill="currentColor"/>
+        </svg>
+      </div>
+      <div class="soil"></div>
+    </div>
+
+    <div class="actions">
+      <button class="btn" id="reviewBtn" disabled>Fehler anzeigen</button>
+      <button class="btn primary" id="nextBtn" disabled>Nächste Frage</button>
+    </div>
+
+    <div class="footer">
+      Tipp: fünf richtige Antworten in Folge lassen die Blume erblühen. Falsche Antworten locken die Schnecke an.
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+<script>
+  // Question bank (10 mixed items)
+  const QUESTIONS = [
+    {
+      cat: "Adjektivendungen (Akkusativ, m.)",
+      q: "Ich sehe ___ klein__ Hund.",
+      options: ["den kleinen","der kleine","dem kleinen"],
+      answer: 0,
+      explain: "Akkusativ maskulin nach bestimmtem Artikel: den + klein- + -en → den kleinen Hund."
+    },
+    {
+      cat: "Artikel (Nominativ, m.)",
+      q: "___ Apfel ist rot.",
+      options: ["Der","Die","Das"],
+      answer: 0,
+      explain: "Apfel ist maskulin: der Apfel."
+    },
+    {
+      cat: "Verbkonjugation (Präsens)",
+      q: "Morgen ___ wir ins Kino.",
+      options: ["gehen","geht","gehst"],
+      answer: 0,
+      explain: "wir → gehen (1. Person Plural)."
+    },
+    {
+      cat: "Wechselpräposition (Richtung → Akkusativ)",
+      q: "Ich stelle die Tasche ___ Tisch.",
+      options: ["auf den","auf dem","in dem"],
+      answer: 0,
+      explain: "Bewegung auf eine Fläche → Akkusativ: auf den Tisch."
+    },
+    {
+      cat: "Dativpräposition",
+      q: "Er wohnt ___ seinen Eltern.",
+      options: ["bei","nach","für"],
+      answer: 0,
+      explain: "bei fordert den Dativ: bei seinen Eltern."
+    },
+    {
+      cat: "Genitiv + Adjektivendung",
+      q: "Wegen ___ laut__ Musik konnten wir nicht schlafen.",
+      options: ["der lauten","der laute","die laute"],
+      answer: 0,
+      explain: "Genitiv Singular feminin mit bestimmtem Artikel: der + laut- + -en → der lauten Musik."
+    },
+    {
+      cat: "Präposition + fester Ausdruck",
+      q: "Die Lampe hängt ___ der Decke.",
+      options: ["an","auf","über"],
+      answer: 0,
+      explain: "Üblicher Ausdruck: an der Decke hängen (Ort → Dativ)."
+    },
+    {
+      cat: "Perfekt (haben/sein + Partizip)",
+      q: "Gestern ___ ich das Buch ___ (lesen).",
+      options: ["habe … gelesen","bin … gelesen","habe … geleset"],
+      answer: 0,
+      explain: "lesen bildet das Perfekt mit haben: habe gelesen."
+    },
+    {
+      cat: "Adjektivendungen (Plural)",
+      q: "Die alt__ Bücher gefallen mir.",
+      options: ["en","e","er"],
+      answer: 0,
+      explain: "Nach bestimmtem Artikel im Plural steht -en: die alten Bücher."
+    },
+    {
+      cat: "Wechselpräposition (Richtung)",
+      q: "Wir fahren ___ die Stadt.",
+      options: ["in","nach","zu"],
+      answer: 0,
+      explain: "Mit Artikel + Richtung: in die Stadt (Akkusativ). ‚nach‘ steht i.d.R. bei Eigennamen ohne Artikel."
+    }
+  ];
+
+  // State
+  let order = [...Array(QUESTIONS.length).keys()].sort(()=>Math.random()-0.5);
+  let idx = 0;
+  let locked = false;
+  let streak = 0;
+  let best = parseInt(localStorage.getItem("gg_best")||"0",10);
+  let flowers = parseInt(localStorage.getItem("gg_flowers")||"0",10);
+  const mistakes = [];
+
+  // Elements
+  const qno = document.getElementById('qno');
+  const cat = document.getElementById('cat');
+  const question = document.getElementById('question');
+  const options = document.getElementById('options');
+  const explain = document.getElementById('explain');
+  const bar = document.getElementById('bar');
+  const stem = document.getElementById('stem');
+  const flower = document.getElementById('flower');
+  const snail = document.getElementById('snail');
+  const toast = document.getElementById('toast');
+  const nextBtn = document.getElementById('nextBtn');
+  const reviewBtn = document.getElementById('reviewBtn');
+  const streakStat = document.getElementById('streakStat');
+  const bestStat = document.getElementById('bestStat');
+  const flowersStat = document.getElementById('flowersStat');
+
+  bestStat.textContent = `Best: ${best}`;
+  flowersStat.textContent = `Blüten: ${flowers}`;
+
+  function showToast(msg){
+    toast.textContent = msg; toast.classList.add('show');
+    setTimeout(()=>toast.classList.remove('show'), 1400);
+  }
+
+  function setProgress(){
+    const pct = Math.round(((idx)/QUESTIONS.length)*100);
+    bar.style.width = pct + '%';
+  }
+
+  function setPlant(){
+    // stem height proportional to current streak (0..5)
+    const h = Math.min(streak,5) * 26; // 0..130
+    stem.style.height = h + 'px';
+    flower.style.setProperty('--h', h + 'px');
+    flower.style.setProperty('--scale', streak>=5? '1' : '0');
+  }
+
+  function updateStats(){
+    streakStat.textContent = `Streak: ${streak}`;
+    bestStat.textContent = `Best: ${best}`;
+    flowersStat.textContent = `Blüten: ${flowers}`;
+  }
+
+  function render(){
+    locked = false; explain.textContent = '';
+    nextBtn.disabled = true; reviewBtn.disabled = mistakes.length===0;
+    snail.classList.remove('show');
+    setProgress(); setPlant(); updateStats();
+
+    const i = order[idx];
+    const item = QUESTIONS[i];
+    qno.textContent = `Frage ${idx+1} von ${QUESTIONS.length}`;
+    cat.textContent = item.cat;
+    question.innerHTML = item.q.replace(/__/g,'__');
+
+    options.innerHTML = '';
+    item.options.forEach((opt, k)=>{
+      const b = document.createElement('button');
+      b.className = 'opt';
+      b.textContent = opt;
+      b.onclick = ()=> choose(k);
+      options.appendChild(b);
+    });
+  }
+
+  function choose(k){
+    if(locked) return; locked = true;
+    const i = order[idx];
+    const item = QUESTIONS[i];
+    const nodes = [...document.querySelectorAll('button.opt')];
+    nodes[item.answer].classList.add('correct');
+
+    if(k === item.answer){
+      streak++;
+      if(streak>best){ best=streak; localStorage.setItem('gg_best', String(best)); }
+      explain.textContent = 'Richtig. ' + item.explain;
+      showToast('Gut gemacht');
+      // growth
+      setPlant();
+      if(streak===5){
+        flowers++; localStorage.setItem('gg_flowers', String(flowers));
+        flowersStat.textContent = `Blüten: ${flowers}`;
+        showToast('Die Blume blüht');
+      }
+    } else {
+      nodes[k].classList.add('wrong');
+      mistakes.push({q:item.q, chosen:item.options[k], correct:item.options[item.answer], note:item.explain});
+      explain.textContent = 'Nicht ganz. ' + item.explain;
+      showToast('Versuch es weiter');
+      // reset growth one step and show snail
+      streak = 0; setPlant(); snail.classList.add('show');
+    }
+
+    // enable next
+    nextBtn.disabled = false; reviewBtn.disabled = mistakes.length===0; updateStats();
+  }
+
+  nextBtn.addEventListener('click', ()=>{
+    if(idx < QUESTIONS.length-1){
+      idx++; render();
+    } else {
+      // finished – reshuffle
+      order = [...Array(QUESTIONS.length).keys()].sort(()=>Math.random()-0.5);
+      idx = 0; render();
+      showToast('Neue Runde gestartet');
+    }
+  });
+
+  reviewBtn.addEventListener('click', ()=>{
+    if(mistakes.length===0){ showToast('Keine Fehler'); return; }
+    const lines = mistakes.map((m,i)=>`${i+1}. ${m.q}\n   Deine Antwort: ${m.chosen}\n   Richtig: ${m.correct}\n   Hinweis: ${m.note}`).join('\n\n');
+    alert('Fehlerübersicht:\n\n' + lines);
+  });
+
+  // initial paint
+  render();
+</script>
+</body>
+</html>
