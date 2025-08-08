@@ -33,13 +33,13 @@
   button.opt.wrong{border-color:rgba(239,68,68,.7);background:rgba(239,68,68,.12)}
   .explain{margin-top:10px;font-size:14px;color:var(--muted);min-height:18px}
 
-  /* Garden */
-  .garden{position:relative;height:220px;margin-top:18px;border-radius:18px;background:linear-gradient(180deg,#0e1a30, #0b1426);overflow:hidden;border:1px solid rgba(255,255,255,.06)}
+  /* Garden → Blumenwiese */
+  .garden{position:relative;height:240px;margin-top:18px;border-radius:18px;background:linear-gradient(180deg,#0e1a30, #0b1426);overflow:hidden;border:1px solid rgba(255,255,255,.06)}
   .soil{position:absolute;bottom:0;left:0;right:0;height:54px;background:linear-gradient(#3f2d1d,#2b1e12);border-top:1px solid rgba(0,0,0,.4)}
-  .plant{position:absolute;left:50%;transform:translateX(-50%);bottom:54px;display:flex;align-items:flex-end;justify-content:center}
+  .meadow{position:absolute;left:10px;right:10px;bottom:54px;display:flex;align-items:flex-end;justify-content:space-between;gap:10px}
+  .plant{position:relative;width:calc(100%/7 - 6px);display:flex;align-items:flex-end;justify-content:center;height:150px}
   .stem{width:6px;background:linear-gradient(#1aa34a,#23c95f);border-radius:3px 3px 0 0;height:0;transition:height .35s ease}
-  .flower{position:absolute;bottom:var(--h,0px);left:50%;transform:translate(-50%, 12px) scale(var(--scale,0));width:48px;height:48px;border-radius:50%;background:radial-gradient(circle at 50% 50%,#ffd166 0 10px,#eab308 10px 12px, #f0b429 12px 16px, transparent 16px), conic-gradient(from 0deg,#a3e635,#86efac,#4ade80,#22c55e,#86efac,#a3e635);
-    transition:transform .35s ease}
+  .flower{position:absolute;bottom:var(--h,0px);left:50%;transform:translate(-50%, 12px) scale(var(--scale,0));width:44px;height:44px;border-radius:50%;transition:transform .35s ease}
   .snail{position:absolute;bottom:58px;right:16px;opacity:0;transition:opacity .25s ease}
   .snail svg{width:40px;height:40px}
   .snail.show{opacity:1}
@@ -56,8 +56,6 @@
 
   .footer{margin-top:16px;color:var(--muted);font-size:12px;text-align:center}
   .link{color:#a3e635}
-
-  /* Small screens fine by default */
 </style>
 </head>
 <body>
@@ -81,12 +79,8 @@
     </div>
 
     <div class="garden" aria-label="Garten">
-      <div class="plant">
-        <div class="stem" id="stem"></div>
-        <div class="flower" id="flower"></div>
-      </div>
+      <div class="meadow" id="meadow"></div>
       <div class="snail" id="snail" aria-hidden="true">
-        <!-- simple snail icon -->
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" xmlns="http://www.w3.org/2000/svg">
           <path stroke-width="1.6" d="M3 17c0-2 1.5-4 4-4h5a3 3 0 1 0 0 6H7a4 4 0 0 1-4-4Z"/>
           <path stroke-width="1.6" d="M17 19c2.8 0 4-1.6 4-4s-1.2-4-4-4h-1"/>
@@ -102,105 +96,72 @@
     </div>
 
     <div class="footer">
-      Tipp: fünf richtige Antworten in Folge lassen die Blume erblühen. Falsche Antworten locken die Schnecke an.
+      Tipp: Alle 5 richtigen Antworten blüht eine neue Blume. Bei einem Fehler verliert nur die **aktuelle** Pflanze ihren Fortschritt (bereits erblühte bleiben).
     </div>
   </div>
 
   <div class="toast" id="toast"></div>
 
 <script>
-  // Question bank (10 mixed items)
-  const QUESTIONS = [
-    {
-      cat: "Adjektivendungen (Akkusativ, m.)",
-      q: "Ich sehe ___ klein__ Hund.",
-      options: ["den kleinen","der kleine","dem kleinen"],
-      answer: 0,
-      explain: "Akkusativ maskulin nach bestimmtem Artikel: den + klein- + -en → den kleinen Hund."
-    },
-    {
-      cat: "Artikel (Nominativ, m.)",
-      q: "___ Apfel ist rot.",
-      options: ["Der","Die","Das"],
-      answer: 0,
-      explain: "Apfel ist maskulin: der Apfel."
-    },
-    {
-      cat: "Verbkonjugation (Präsens)",
-      q: "Morgen ___ wir ins Kino.",
-      options: ["gehen","geht","gehst"],
-      answer: 0,
-      explain: "wir → gehen (1. Person Plural)."
-    },
-    {
-      cat: "Wechselpräposition (Richtung → Akkusativ)",
-      q: "Ich stelle die Tasche ___ Tisch.",
-      options: ["auf den","auf dem","in dem"],
-      answer: 0,
-      explain: "Bewegung auf eine Fläche → Akkusativ: auf den Tisch."
-    },
-    {
-      cat: "Dativpräposition",
-      q: "Er wohnt ___ seinen Eltern.",
-      options: ["bei","nach","für"],
-      answer: 0,
-      explain: "bei fordert den Dativ: bei seinen Eltern."
-    },
-    {
-      cat: "Genitiv + Adjektivendung",
-      q: "Wegen ___ laut__ Musik konnten wir nicht schlafen.",
-      options: ["der lauten","der laute","die laute"],
-      answer: 0,
-      explain: "Genitiv Singular feminin mit bestimmtem Artikel: der + laut- + -en → der lauten Musik."
-    },
-    {
-      cat: "Präposition + fester Ausdruck",
-      q: "Die Lampe hängt ___ der Decke.",
-      options: ["an","auf","über"],
-      answer: 0,
-      explain: "Üblicher Ausdruck: an der Decke hängen (Ort → Dativ)."
-    },
-    {
-      cat: "Perfekt (haben/sein + Partizip)",
-      q: "Gestern ___ ich das Buch ___ (lesen).",
-      options: ["habe … gelesen","bin … gelesen","habe … geleset"],
-      answer: 0,
-      explain: "lesen bildet das Perfekt mit haben: habe gelesen."
-    },
-    {
-      cat: "Adjektivendungen (Plural)",
-      q: "Die alt__ Bücher gefallen mir.",
-      options: ["en","e","er"],
-      answer: 0,
-      explain: "Nach bestimmtem Artikel im Plural steht -en: die alten Bücher."
-    },
-    {
-      cat: "Wechselpräposition (Richtung)",
-      q: "Wir fahren ___ die Stadt.",
-      options: ["in","nach","zu"],
-      answer: 0,
-      explain: "Mit Artikel + Richtung: in die Stadt (Akkusativ). ‚nach‘ steht i.d.R. bei Eigennamen ohne Artikel."
-    }
+  // --- Blumen-Styles (Farben/Größen variieren) ---
+  const FLOWER_STYLES = [
+    {bg:'radial-gradient(circle at 50% 50%,#ffd166 0 10px,#eab308 10px 12px,#f0b429 12px 16px, transparent 16px), conic-gradient(from 0deg,#a3e635,#86efac,#4ade80,#22c55e,#86efac,#a3e635)', size:44},
+    {bg:'radial-gradient(circle at 50% 50%,#ff9ecd 0 10px,#db2777 10px 12px,#be185d 12px 16px, transparent 16px), conic-gradient(from 0deg,#f472b6,#ec4899,#db2777,#f472b6)', size:42},
+    {bg:'radial-gradient(circle at 50% 50%,#93c5fd 0 10px,#2563eb 10px 12px,#1e40af 12px 16px, transparent 16px), conic-gradient(from 0deg,#3b82f6,#60a5fa,#2563eb,#1d4ed8)', size:46},
+    {bg:'radial-gradient(circle at 50% 50%,#bbf7d0 0 10px,#16a34a 10px 12px,#065f46 12px 16px, transparent 16px), conic-gradient(from 0deg,#4ade80,#22c55e,#16a34a,#15803d)', size:40},
+    {bg:'radial-gradient(circle at 50% 50%,#fde68a 0 10px,#d97706 10px 12px,#92400e 12px 16px, transparent 16px), conic-gradient(from 0deg,#fbbf24,#f59e0b,#d97706,#b45309)', size:48},
+    {bg:'radial-gradient(circle at 50% 50%,#fca5a5 0 10px,#dc2626 10px 12px,#7f1d1d 12px 16px, transparent 16px), conic-gradient(from 0deg,#ef4444,#dc2626,#b91c1c,#7f1d1d)', size:43},
+    {bg:'radial-gradient(circle at 50% 50%,#ddd6fe 0 10px,#7c3aed 10px 12px,#4c1d95 12px 16px, transparent 16px), conic-gradient(from 0deg,#8b5cf6,#7c3aed,#6d28d9,#4c1d95)', size:45}
   ];
 
-  // State
+  // --- Fragenpool (erweitert) ---
+  const QUESTIONS = [
+    { cat: "Adjektivendungen (Akkusativ, m.)", q: "Ich sehe ___ klein__ Hund.", options: ["den kleinen","der kleine","dem kleinen"], answer: 0, explain: "Akkusativ maskulin nach bestimmtem Artikel: den + klein- + -en → den kleinen Hund."},
+    { cat: "Artikel (Nominativ, m.)", q: "___ Apfel ist rot.", options: ["Der","Die","Das"], answer: 0, explain: "Apfel ist maskulin: der Apfel."},
+    { cat: "Verbkonjugation (Präsens)", q: "Morgen ___ wir ins Kino.", options: ["gehen","geht","gehst"], answer: 0, explain: "wir → gehen (1. Person Plural)."},
+    { cat: "Wechselpräposition (Richtung → Akkusativ)", q: "Ich stelle die Tasche ___ Tisch.", options: ["auf den","auf dem","in dem"], answer: 0, explain: "Bewegung auf eine Fläche → Akkusativ: auf den Tisch."},
+    { cat: "Dativpräposition", q: "Er wohnt ___ seinen Eltern.", options: ["bei","nach","für"], answer: 0, explain: "bei fordert den Dativ: bei seinen Eltern."},
+    { cat: "Genitiv + Adjektivendung", q: "Wegen ___ laut__ Musik konnten wir nicht schlafen.", options: ["der lauten","der laute","die laute"], answer: 0, explain: "Genitiv Singular feminin mit bestimmtem Artikel: der + laut- + -en → der lauten Musik."},
+    { cat: "Präposition + fester Ausdruck", q: "Die Lampe hängt ___ der Decke.", options: ["an","auf","über"], answer: 0, explain: "Üblicher Ausdruck: an der Decke hängen (Ort → Dativ)."},
+    { cat: "Perfekt (haben/sein + Partizip)", q: "Gestern ___ ich das Buch ___ (lesen).", options: ["habe … gelesen","bin … gelesen","habe … geleset"], answer: 0, explain: "lesen bildet das Perfekt mit haben: habe gelesen."},
+    { cat: "Adjektivendungen (Plural)", q: "Die alt__ Bücher gefallen mir.", options: ["en","e","er"], answer: 0, explain: "Nach bestimmtem Artikel im Plural steht -en: die alten Bücher."},
+    { cat: "Wechselpräposition (Richtung)", q: "Wir fahren ___ die Stadt.", options: ["in","nach","zu"], answer: 0, explain: "Mit Artikel + Richtung: in die Stadt (Akkusativ). ‚nach‘ steht i.d.R. bei Eigennamen ohne Artikel."},
+
+    { cat: "Konjunktiv II (Höflichkeit)", q: "___ Sie mir bitte helfen?", options: ["Könnten","Könnte","Könntest"], answer: 0, explain: "Höfliche Bitte mit Konjunktiv II: Könnten Sie …?"},
+    { cat: "Präteritum (unregelmäßig)", q: "Früher ___ ich oft in den Bergen.", options: ["war","bin","gewesen"], answer: 0, explain: "Präteritum von sein (1. Sg.): ich war."},
+    { cat: "Trennbare Verben (Präsens)", q: "Ich ___ morgen früh auf.", options: ["stehe","aufstehe","auf stehe"], answer: 0, explain: "Im Aussagesatz steht das Präfix am Ende: Ich stehe … auf."},
+    { cat: "Modalverb + Infinitiv", q: "Ich ___ heute arbeiten.", options: ["muss","müssen","müsst"], answer: 0, explain: "1. Person Singular: ich muss."},
+    { cat: "Genitiv (nach Präposition)", q: "Trotz ___ Regen gingen wir spazieren.", options: ["des","der","den"], answer: 0, explain: "Genitiv nach trotz: des Regens."},
+    { cat: "Perfekt mit sein", q: "Wir ___ nach Hause ___ (fahren).", options: ["sind … gefahren","haben … gefahren","waren … gefahren"], answer: 0, explain: "Bewegungsverben → meist sein: sind gefahren."},
+    { cat: "Reflexiv (Akk.)", q: "Ich erinnere ___ an den Film.", options: ["mich","mir","dich"], answer: 0, explain: "sich erinnern an + Akk.: ich erinnere mich …"},
+    { cat: "Adjektivendungen (Dativ Plural)", q: "Mit den neu__ Freunden macht es Spaß.", options: ["en","e","er"], answer: 0, explain: "Dativ Plural nach bestimmtem Artikel: den neuen Freunden."},
+
+    { cat: "Wechselpräp. (Ort → Dativ)", q: "Das Bild hängt ___ der Wand.", options: ["an","auf","in"], answer: 0, explain: "Ort/Position → Dativ: an der Wand."},
+    { cat: "Wechselpräp. (Richtung → Akk.)", q: "Ich hänge das Bild ___ die Wand.", options: ["an","auf","in"], answer: 0, explain: "Richtung/Bewegung → Akkusativ: an die Wand."}
+  ];
+
+  // --- Zustand ---
   let order = [...Array(QUESTIONS.length).keys()].sort(()=>Math.random()-0.5);
-  let idx = 0;
-  let locked = false;
-  let streak = 0;
+  let idx = 0;            // Frageindex
+  let locked = false;     // Doppelklick-Schutz
+  let streak = 0;         // längste Serie
   let best = parseInt(localStorage.getItem("gg_best")||"0",10);
   let flowers = parseInt(localStorage.getItem("gg_flowers")||"0",10);
   const mistakes = [];
 
-  // Elements
+  // Wiesen-Progress (Soft Reset):
+  const PLANTS = 7;          // Anzahl Slots in der Wiese
+  let completed = 0;         // voll erblühte Pflanzen (nicht persistent)
+  let stage = 0;             // 0..4 Fortschritt der aktuellen Pflanze
+
+  // --- Elemente ---
   const qno = document.getElementById('qno');
   const cat = document.getElementById('cat');
   const question = document.getElementById('question');
   const options = document.getElementById('options');
   const explain = document.getElementById('explain');
   const bar = document.getElementById('bar');
-  const stem = document.getElementById('stem');
-  const flower = document.getElementById('flower');
+  const meadowEl = document.getElementById('meadow');
   const snail = document.getElementById('snail');
   const toast = document.getElementById('toast');
   const nextBtn = document.getElementById('nextBtn');
@@ -212,22 +173,28 @@
   bestStat.textContent = `Best: ${best}`;
   flowersStat.textContent = `Blüten: ${flowers}`;
 
-  function showToast(msg){
-    toast.textContent = msg; toast.classList.add('show');
-    setTimeout(()=>toast.classList.remove('show'), 1400);
+  // --- Wiese aufbauen ---
+  let stems = [], flowersEls = [];
+  function createMeadow(){
+    meadowEl.innerHTML = '';
+    stems = []; flowersEls = [];
+    for(let i=0;i<PLANTS;i++){
+      const p = document.createElement('div');
+      p.className = 'plant';
+      const stem = document.createElement('div'); stem.className='stem';
+      const fl = document.createElement('div'); fl.className='flower';
+      const style = FLOWER_STYLES[i % FLOWER_STYLES.length];
+      fl.style.background = style.bg;
+      fl.style.width = style.size+'px';
+      fl.style.height = style.size+'px';
+      p.appendChild(stem); p.appendChild(fl); meadowEl.appendChild(p);
+      stems.push(stem); flowersEls.push(fl);
+    }
   }
 
   function setProgress(){
     const pct = Math.round(((idx)/QUESTIONS.length)*100);
     bar.style.width = pct + '%';
-  }
-
-  function setPlant(){
-    // stem height proportional to current streak (0..5)
-    const h = Math.min(streak,5) * 26; // 0..130
-    stem.style.height = h + 'px';
-    flower.style.setProperty('--h', h + 'px');
-    flower.style.setProperty('--scale', streak>=5? '1' : '0');
   }
 
   function updateStats(){
@@ -236,11 +203,41 @@
     flowersStat.textContent = `Blüten: ${flowers}`;
   }
 
+  function setMeadow(){
+    // Index der aktuell wachsenden Pflanze (rotiert über die Slots)
+    const currentIndex = completed % PLANTS;
+
+    for(let i=0;i<PLANTS;i++){
+      if(i < Math.min(completed, PLANTS)){
+        // voll erblüht
+        stems[i].style.height = (5*26) + 'px';
+        flowersEls[i].style.setProperty('--h', (5*26) + 'px');
+        flowersEls[i].style.setProperty('--scale','1');
+      } else if(i === currentIndex && completed < PLANTS){
+        // aktuell wachsend
+        const h = stage * 26;
+        stems[i].style.height = h + 'px';
+        flowersEls[i].style.setProperty('--h', h + 'px');
+        flowersEls[i].style.setProperty('--scale', stage>=5? '1':'0');
+      } else {
+        // noch leer
+        stems[i].style.height = '0px';
+        flowersEls[i].style.setProperty('--h','0px');
+        flowersEls[i].style.setProperty('--scale','0');
+      }
+    }
+  }
+
+  function showToast(msg){
+    toast.textContent = msg; toast.classList.add('show');
+    setTimeout(()=>toast.classList.remove('show'), 1400);
+  }
+
   function render(){
     locked = false; explain.textContent = '';
     nextBtn.disabled = true; reviewBtn.disabled = mistakes.length===0;
     snail.classList.remove('show');
-    setProgress(); setPlant(); updateStats();
+    setProgress(); setMeadow(); updateStats();
 
     const i = order[idx];
     const item = QUESTIONS[i];
@@ -258,6 +255,15 @@
     });
   }
 
+  function completeBloom(){
+    // Erblühen + nächste Pflanze beginnen
+    flowers++; localStorage.setItem('gg_flowers', String(flowers));
+    showToast('Neue Blume!');
+    completed++;
+    stage = 0; // aktuelle abgeschlossen, nächste wachsen lassen
+    setMeadow();
+  }
+
   function choose(k){
     if(locked) return; locked = true;
     const i = order[idx];
@@ -270,31 +276,30 @@
       if(streak>best){ best=streak; localStorage.setItem('gg_best', String(best)); }
       explain.textContent = 'Richtig. ' + item.explain;
       showToast('Gut gemacht');
-      // growth
-      setPlant();
-      if(streak===5){
-        flowers++; localStorage.setItem('gg_flowers', String(flowers));
-        flowersStat.textContent = `Blüten: ${flowers}`;
-        showToast('Die Blume blüht');
+      // Wachstum der aktuellen Pflanze
+      stage++;
+      if(stage>=5){
+        completeBloom();
+      } else {
+        setMeadow();
       }
     } else {
       nodes[k].classList.add('wrong');
       mistakes.push({q:item.q, chosen:item.options[k], correct:item.options[item.answer], note:item.explain});
       explain.textContent = 'Nicht ganz. ' + item.explain;
       showToast('Versuch es weiter');
-      // reset growth one step and show snail
-      streak = 0; setPlant(); snail.classList.add('show');
+      // Soft Reset: nur aktuelle Pflanze verliert Fortschritt
+      streak = 0; stage = 0; setMeadow(); snail.classList.add('show');
     }
 
-    // enable next
     nextBtn.disabled = false; reviewBtn.disabled = mistakes.length===0; updateStats();
   }
 
+  // Buttons
   nextBtn.addEventListener('click', ()=>{
     if(idx < QUESTIONS.length-1){
       idx++; render();
     } else {
-      // finished – reshuffle
       order = [...Array(QUESTIONS.length).keys()].sort(()=>Math.random()-0.5);
       idx = 0; render();
       showToast('Neue Runde gestartet');
@@ -307,7 +312,8 @@
     alert('Fehlerübersicht:\n\n' + lines);
   });
 
-  // initial paint
+  // Start
+  createMeadow();
   render();
 </script>
 </body>
